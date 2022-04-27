@@ -43,12 +43,16 @@ func StanServer(conf *src.Config) *[]JsonStruct.JsonStruct {
 		fmt.Println(er)
 	}
 	countInvalidModels := 1
+	countModels := 1
 	_, err := sc.Subscribe("foo", func(m *stan.Msg) {
 		err := json.Unmarshal(m.Data, &me)
 		if err != nil {
 			fmt.Printf("Invalid model %d\n", countInvalidModels)
 			countInvalidModels++
 			return
+		} else {
+			countModels++
+			fmt.Printf("Valid model %d\n", countModels)
 		}
 		bam = append(bam, me)
 
