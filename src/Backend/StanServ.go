@@ -5,26 +5,45 @@ import (
 	"MyProjectForWB/src/JsonStruct"
 	"MyProjectForWB/src/Postgres"
 	_ "MyProjectForWB/src/Postgres"
-	pr "MyProjectForWB/src/Postgres/ProducerStack"
 	"encoding/json"
 	"fmt"
+	_ "github.com/lib/pq"
 	"github.com/nats-io/stan.go"
-	"time"
+	"log"
 )
 
-func StanServer(conf *src.Config) {
+func StanServer(conf *src.Config) *[]JsonStruct.JsonStruct {
 	var me JsonStruct.JsonStruct
 	bam := make([]JsonStruct.JsonStruct, 0, 10)
 
 	dbSql := Postgres.DbConnect(*conf)
 
+	var jsonData []byte
+	query, er := dbSql.Query("SELECT model FROM models;")
+	if er != nil {
+		log.Panic(er)
+	}
+
+	for query.Next() {
+		err := query.Scan(&jsonData)
+		if err != nil {
+			log.Panic(err)
+		}
+		e := json.Unmarshal(jsonData, &me)
+		if e != nil {
+			fmt.Print(e)
+		} else {
+			bam = append(bam, me)
+		}
+
+	}
+
 	sc, er := stan.Connect(conf.ClusterID, "Ruslan")
 	if er != nil {
 		fmt.Println(er)
-		return
 	}
 	countInvalidModels := 1
-	var sub, err = sc.Subscribe("foo", func(m *stan.Msg) {
+	_, err := sc.Subscribe("foo", func(m *stan.Msg) {
 		err := json.Unmarshal(m.Data, &me)
 		if err != nil {
 			fmt.Printf("Invalid model %d\n", countInvalidModels)
@@ -38,15 +57,15 @@ func StanServer(conf *src.Config) {
 			fmt.Println(err)
 		}
 	})
-
-	pr.Producer(conf)
-
-	time.Sleep(time.Second * 1)
-
-	err = sub.Unsubscribe()
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
+	//
+	//err = sub.Unsubscribe()
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
 
-	err = sc.Close()
+	//defer sc.Close()
+	return &bam
 }

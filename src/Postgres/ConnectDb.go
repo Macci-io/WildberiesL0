@@ -4,12 +4,13 @@ import (
 	"MyProjectForWB/src"
 	"database/sql"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 )
 
 func DbConnect(config src.Config) *sql.DB {
 
-	dbSql, err := sql.Open("postgres", "postgresql://"+config.UserBase+":sensation05@localhost/one?sslmode=disable")
+	dbSql, err := sql.Open("postgres", "postgresql://"+config.UserBase+":"+config.PassBase+"@"+config.AddrBase+"/"+config.NameDB+"?sslmode=disable")
 	if err != nil {
 		fmt.Println("Can't connect to database one")
 		log.Fatal(err)
